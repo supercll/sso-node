@@ -5,15 +5,15 @@ const json = require('koa-json')
 const onerror = require('koa-onerror')
 const bodyparser = require('koa-bodyparser')
 const logger = require('koa-logger')
-var request = require('koa2-request');
+var request = require('koa2-request')
 var session = require('koa-session')
 
 const index = require('./routes/index')
-const {
-  v4: uuid
-} = require('uuid');
+const { v4: uuid } = require('uuid')
+const Router = require('koa-router')
+const router = new Router()
 
-app.keys = ['lc'];
+app.keys = ['lc']
 
 const CONFIG = {
   key: 'koa.sess',
@@ -26,24 +26,28 @@ const CONFIG = {
   renew: false,
   secure: false,
   sameSite: null,
-};
+}
 
-app.use(session(CONFIG, app));
+app.use(session(CONFIG, app))
 
 // error handler
 onerror(app)
 
 // middlewares
-app.use(bodyparser({
-  enableTypes: ['json', 'form', 'text']
-}))
+app.use(
+  bodyparser({
+    enableTypes: ['json', 'form', 'text'],
+  }),
+)
 app.use(json())
 app.use(logger())
 app.use(require('koa-static')(__dirname + '/public'))
 
-app.use(views(__dirname + '/views', {
-  extension: 'ejs'
-}))
+app.use(
+  views(__dirname + '/views', {
+    extension: 'ejs',
+  }),
+)
 
 // logger
 app.use(async (ctx, next) => {
@@ -62,45 +66,61 @@ app.use(async (ctx, next) => {
   console.log(token)
   if (!(tk || token)) {
     ctx.redirect(`http://www.c.com:3000/view/login?originUrl=${originUrl}`)
-  } else if (tk) {
+  } else if (tk && tk !== 'undefined') {
     let response = await request({
       url: `http://www.c.com:3000/validate?tk=${tk}`,
     })
     let username = response.body
     if (username) {
       ctx.state.username = username
-      let token = uuid().replace(new RegExp("-", "g"), "").toLocaleLowerCase()
+      let token = uuid().replace(new RegExp('-', 'g'), '').toLocaleLowerCase()
       ctx.session[token] = tk
       ctx.cookies.set('token', token, {
-        maxAge: 60 * 60 * 1000, //有效时间，单位毫秒
+        maxAge: 60 * 1000, //有效时间，单位毫秒
         httpOnly: false,
         path: '/',
-      });
+      })
     } else {
-      //todo ticket not exist
+      ctx.cookies.set('token', '', {
+        maxAge: 0,
+        httpOnly: false,
+        path: '/',
+      })
+      ctx.redirect(`http://www.c.com:3000/view/login?originUrl=${originUrl}`)
     }
   } else {
     console.log(ctx.session)
     let tk = ctx.session[token]
     console.log('tk777:', tk)
+    if (!token) {
+      ctx.cookies.set('token', '', {
+        maxAge: 0,
+        httpOnly: false,
+        path: '/',
+      })
+      ctx.redirect(`http://www.c.com:3000/view/login?originUrl=${originUrl}`)
+    }
     let response = await request({
       url: `http://www.c.com:3000/validate?tk=${tk}`,
     })
     let username = response.body
     if (username) {
       ctx.state.username = username
-      let token = uuid().replace(new RegExp("-", "g"), "").toLocaleLowerCase()
+      let token = uuid().replace(new RegExp('-', 'g'), '').toLocaleLowerCase()
       ctx.session[token] = tk
       ctx.cookies.set('token', token, {
-        maxAge: 60 * 60 * 1000, //有效时间，单位毫秒
+        maxAge: 60 * 1000, //有效时间，单位毫秒
         httpOnly: false,
         path: '/',
-      });
-      setTimeout(() => {
-        ctx.redirect('/index')
-      }, 1000)
+      })
+
     } else {
-      //todo
+      ctx.cookies.set('token', '', {
+        maxAge: 0,
+        httpOnly: false,
+        path: '/',
+      })
+      ctx.redirect(`http://www.c.com:3000/view/login?originUrl=${originUrl}`)
     }
   }
   await next()
@@ -112,6 +132,6 @@ app.use(index.routes(), index.allowedMethods())
 // error-handling
 app.on('error', (err, ctx) => {
   console.error('server error', err, ctx)
-});
+})
 
 module.exports = app

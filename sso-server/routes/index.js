@@ -1,39 +1,44 @@
-const router = require('koa-router')()
-const {
-  v4: uuid
-} = require('uuid');
+const Router = require('koa-router')
+
+const router = new Router()
+
+const { v4: uuid } = require('uuid')
 
 router.get('/view/login', async (ctx, next) => {
-  let {
-    originUrl
-  } = ctx.request.query
+  let { originUrl } = ctx.request.query
   await ctx.render('login', {
-    originUrl
+    originUrl,
   })
+})
+router.get('/logout', async (ctx, next) => {
+  let token = ctx.cookies.get('token')
+  ctx.session[token] = ''
+  ctx.cookies.set('token', '', {
+    maxAge: 0,
+    httpOnly: false,
+    path: '/',
+  })
+  console.log(ctx.cookies)
 })
 
 router.post('/login', async (ctx, next) => {
-  let {
-    username,
-    password,
-    originUrl
-  } = ctx.request.body
+  let { username, password, originUrl } = ctx.request.body
 
   let userInfo = {
     username: 'lc',
-    password: '103358'
+    password: '103358',
   }
 
   if (username === userInfo.username && password === userInfo.password) {
-    let tk = uuid().replace(new RegExp("-", "g"), "").toLocaleLowerCase()
-    let token = uuid().replace(new RegExp("-", "g"), "").toLocaleLowerCase()
+    let tk = uuid().replace(new RegExp('-', 'g'), '').toLocaleLowerCase()
+    let token = uuid().replace(new RegExp('-', 'g'), '').toLocaleLowerCase()
     ctx.tickets[tk] = userInfo.username
     ctx.session[token] = tk
     ctx.cookies.set('token', token, {
-      maxAge: 60 * 60 * 1000, //有效时间，单位毫秒
+      maxAge: 60 * 1000, //有效时间，单位毫秒
       httpOnly: false,
       path: '/',
-    });
+    })
     ctx.response.redirect(`${originUrl}?tk=${tk}`)
   } else {
     //todo 登录失败
@@ -49,11 +54,9 @@ router.get('/validate', async (ctx, next) => {
   //else if (token) {
   //   let tk = ctx.session[token]
   //   ctx.body = tk
-  // } 
+  // }
   else {
-    ctx.body = {
-      code: 403
-    }
+    ctx.body = null
   }
 })
 

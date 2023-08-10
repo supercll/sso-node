@@ -1,6 +1,6 @@
 const router = require('koa-router')()
 
-router.get('/index', async (ctx, next) => {
+router.get('/', async (ctx, next) => {
   await ctx.render('index', {
     username: ctx.state.username
   })
